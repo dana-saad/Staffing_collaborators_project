@@ -93,6 +93,24 @@ python scripts/performance.py
 python scripts/build_notebook.py          # regenerates the notebook from source
 ```
 
+## Results
+
+| Instance | Non-dominated solutions | Best profit | Solves / grid cells | Exact |
+|---|---|---|---|---|
+| toy | 10 | 65 | 11 / 36 | yes |
+| medium | 43 | 413 | 47 / 368 | yes |
+| large | 10 found | 790 (true optimum 817) | 18 / 266 | no — see below |
+
+The large model has 5 054 variables, past the cap of the licence that ships with
+`pip install gurobipy`, so that run used HiGHS with the grid coarsened to every
+second value and a 60 s cap per solve. Every point it returns is genuinely
+non-dominated, but points between grid lines are missed and a capped solve can
+stop short of the optimum. On a full academic licence, run it exactly:
+
+```python
+co.epsilon_constraint(large, step=1, backend="gurobi")
+```
+
 ## Correctness
 
 Three checks, all in the notebook:
@@ -102,8 +120,20 @@ Three checks, all in the notebook:
    respected, coverage exact — and recomputes all three objective values from
    the schedule rather than trusting the solver's variables. It runs after
    every solve.
-2. **Every reported point is non-dominated.** `check.check_front` proves it
-   with three further solves per point.
+2. **Every reported point is non-dominated.** `check.check_front` tests it with
+   three further solves per point. All 10 toy points and a 6-point sample of
+   the medium front came back **proved**, with no failures.
 3. **Nothing was missed.** Completeness is argued in the notebook and tested by
    generating feasible schedules in random directions and confirming the front
-   dominates all of them.
+   dominates all of them — 300 samples on toy, none missed.
+
+One trap is worth knowing about, because the first version of check 2 fell into
+it. Asking whether the *optimum* of each solve equals the point is wrong under a
+time limit: a solve can stop early and report a value worse than the point's
+own, which looks like a contradiction and is really an unfinished search. On the
+medium instance it flagged `(250, 3, 5)` as failing, reporting a best duration of
+4 after timing out with a 52 % gap — while forcing `duration ≤ 3` solves to
+proven optimality and returns the point itself. The test is now "no solve
+*found* anything strictly better", which is valid even from a non-converged
+solve because any incumbent is feasible, and `check_front` reports "proved"
+separately from "no counter-example found".
