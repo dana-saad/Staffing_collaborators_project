@@ -1,0 +1,36 @@
+{'instance': 'instance', 'staff': 6, 'jobs': 25, 'quals': 10, 'horizon': 36, 'demand': 272, 'capacity': 193, 'load': 1.41, 'total_gain': 1020}
+Restricted license - for non-production use only - expires 2028-11-29
+{'n_vars': 5054, 'n_constrs': 3195}
+Running HiGHS 1.16.0 (git hash: f3f113d): Copyright (c) 2026 under MIT licence terms
+Includes third-party software components, see THIRD_PARTY_NOTICES.md for full details
+  e=( 36, 25)  ->  (767, 14, 9)
+  e=( 36,  7)  ->  (746, 17, 7)
+  e=( 36,  5)  ->  (625, 30, 5)
+  e=( 36,  3)  ->  (476, 29, 3)
+  e=( 36,  1)  ->  (290, 18, 1)
+  e=( 36,  0)  ->  (0, 0, 0)
+  e=( 28,  5)  ->  (0, 0, 0)
+  e=( 16,  7)  ->  (767, 12, 7)
+  e=( 12, 25)  ->  (770, 12, 9)
+  e=( 10, 25)  ->  (779, 10, 8)
+  e=( 10,  7)  ->  (776, 10, 7)
+  e=(  8, 25)  ->  (790, 8, 10)
+  e=(  8,  9)  ->  (764, 8, 9)
+  e=(  8,  7)  ->  (0, 0, 0)
+  e=(  6, 25)  ->  (60, 5, 1)
+  e=(  4, 25)  ->  (80, 4, 1)
+  e=(  2, 25)  ->  (115, 2, 3)
+  e=(  0, 25)  ->  (0, 0, 0)
+  #   profit   longest   per empl.   jobs done
+------------------------------------------------
+  0      790         8          10       17/25
+  1      779        10           8       16/25
+  2      776        10           7       16/25
+  3      764         8           9       16/25
+  4      625        30           5       13/25
+  5      476        29           3        9/25
+  6      290        18           1        5/25
+  7      115         2           3        3/25
+  8       80         4           1        2/25
+  9        0         0           0        0/25
+solves=18 reused=248 cells=266 wall=910s

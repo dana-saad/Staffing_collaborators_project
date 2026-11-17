@@ -1,0 +1,14 @@
+--- s3_j5_h8 ---
+Restricted license - for non-production use only - expires 2028-11-29
+  vars=  227 cons=  193 single=0.1s front=1.0s points=7 solves=10/54 (81.5% reused) [gurobi]
+--- s4_j7_h10 ---
+  vars=  417 cons=  323 single=0.1s front=2.3s points=11 solves=12/88 (86.4% reused) [gurobi]
+--- s4_j9_h12 ---
+  vars=  511 cons=  457 single=0.1s front=0.8s points=9 solves=11/130 (91.5% reused) [gurobi]
+--- s5_j10_h14 ---
+  vars= 1127 cons=  604 single=0.7s front=141.3s points=23 solves=24/165 (85.5% reused) [gurobi]
+--- s5_j12_h16 ---
+  vars= 1309 cons=  787 single=0.5s front=814.5s points=24 solves=25/221 (88.7% reused) [gurobi]
+  budget exhausted, stopping the ladder here
+
+total 962s over 5 instances
