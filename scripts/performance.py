@@ -22,8 +22,8 @@ import compuopti as co
 LADDER = [(3, 5, 8), (4, 7, 10), (4, 9, 12), (5, 10, 14),
           (5, 12, 16), (6, 14, 18), (6, 16, 20)]
 
-GUROBI_LIMIT = 2000      # size-limited licence; a full licence has no such cap
-SOLVE_TIME_LIMIT = 60
+SOLVE_TIME_LIMIT = 60    # this is a timing study, so solves stay capped --
+                         # but every row reports how many did not prove optimality
 FRONT_BUDGET = 900
 
 
@@ -33,8 +33,7 @@ def run_one(n_staff, n_jobs, horizon, seed=1, save_dir="instances/generated"):
     co.save_instance(inst, f"{save_dir}/{inst['name']}.json")
 
     size = co.model_size(inst)
-    fits = size["n_vars"] < GUROBI_LIMIT and size["n_constrs"] < GUROBI_LIMIT
-    backend = "gurobi" if fits else "highs"
+    backend = "gurobi"
 
     row = dict(co.instance_stats(inst), **size, backend=backend)
 
@@ -49,6 +48,8 @@ def run_one(n_staff, n_jobs, horizon, seed=1, save_dir="instances/generated"):
     row["front_size"] = len(res["front"])
     row["n_solves"] = res["n_solves"]
     row["n_cells"] = res["n_cells"]
+    row["n_unproven"] = res["n_unproven"]
+    row["exact"] = res["exact"]
     row["reuse_pct"] = round(100 * res["n_reused"] / res["n_cells"], 1)
     return row, res
 
@@ -72,7 +73,8 @@ def main():
         print(f"  vars={row['n_vars']:>5} cons={row['n_constrs']:>5} "
               f"single={row['t_single']:.1f}s front={row['t_front']:.1f}s "
               f"points={row['front_size']} solves={row['n_solves']}/{row['n_cells']} "
-              f"({row['reuse_pct']}% reused) [{row['backend']}]", flush=True)
+              f"({row['reuse_pct']}% reused) unproven={row['n_unproven']} "
+              f"exact={row['exact']}", flush=True)
         with open(out, "wb") as f:
             pickle.dump({"rows": rows, "fronts": fronts}, f)
         with open(out.replace(".pkl", ".json"), "w") as f:

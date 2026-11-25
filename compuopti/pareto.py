@@ -129,7 +129,7 @@ def epsilon_constraint(inst, time_limit=None, duration_max=None, projects_max=No
 
     solved = []          # (e2, e3, solution) for every visited cell
     found = []           # solutions actually computed
-    n_solves = n_reused = 0
+    n_solves = n_reused = n_unproven = 0
 
     e2_vals = sorted({*range(dur_hi, -1, -step), 0}, reverse=True)
     e3_vals = sorted({*range(proj_hi, -1, -step), 0}, reverse=True)
@@ -137,9 +137,14 @@ def epsilon_constraint(inst, time_limit=None, duration_max=None, projects_max=No
     cells.sort(key=lambda c: (-c[0], -c[1]))     # loosest first
 
     for e2, e3 in cells:
+        # The reuse argument needs the looser cell's answer to be OPTIMAL:
+        # "the tighter problem cannot beat the looser one, and this solution
+        # already attains the looser optimum". A solve cut off by the time
+        # limit attains nothing in particular, so it is never reused.
         reuse = None
         for pe2, pe3, psol in solved:
             if (pe2 >= e2 and pe3 >= e3
+                    and (psol.meta or {}).get("optimal")
                     and psol.max_duration <= e2 and psol.max_projects <= e3):
                 reuse = psol
                 break
@@ -156,6 +161,8 @@ def epsilon_constraint(inst, time_limit=None, duration_max=None, projects_max=No
             continue
         solved.append((e2, e3, sol))
         found.append(sol)
+        if not (sol.meta or {}).get("optimal"):
+            n_unproven += 1
         if progress:
             print(f"  e=({e2:>3},{e3:>3})  ->  {sol.objectives}", flush=True)
 
@@ -165,11 +172,14 @@ def epsilon_constraint(inst, time_limit=None, duration_max=None, projects_max=No
         "all": found,
         "n_solves": n_solves,
         "n_reused": n_reused,
+        "n_unproven": n_unproven,
         "n_cells": len(cells),
         "runtime": time.time() - t0,
         "grid": (dur_hi, proj_hi),
         "step": step,
-        "exact": step == 1,
+        # Exact only when the grid was complete AND every solve proved
+        # optimality. Either failing makes this a lower bound on the front.
+        "exact": step == 1 and n_unproven == 0,
     }
 
 
@@ -220,6 +230,8 @@ def _solve_weighted(inst, weights, time_limit=None, backend="gurobi"):
     m, v, f = build_model(inst)
     if time_limit:
         m.Params.TimeLimit = time_limit
+    m.Params.MIPGap = 0        # else a near-optimal point makes the
+                               # comparison with epsilon-constraint unfair
     m.setObjective(gp.quicksum(SENSE[k] * weights[k] * f[k] for k in OBJECTIVES),
                    GRB.MAXIMIZE)
     runner = _run_gurobi if backend == "gurobi" else _run_highs

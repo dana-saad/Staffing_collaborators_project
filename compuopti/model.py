@@ -220,9 +220,26 @@ def verify(inst, sol):
             got = worked.get((j, k), 0)
             assert got == need, f"{j}/{k}: {got} person-days scheduled, {need} required"
 
-    assert sol.profit == sum(inst["g"][j] - inst["c"][j] * sol.late[j] for j in sol.done)
-    assert sol.max_duration == max(sol.duration.values(), default=0)
-    assert sol.max_projects == max((len(p) for p in sol.per_person.values()), default=0)
+    # Rebuild every derived quantity from the raw schedule, so this is a real
+    # check on extract_solution rather than a restatement of what it stored.
+    days, touched = {}, {}
+    for (i, t), (j, _k) in sol.schedule.items():
+        days.setdefault(j, []).append(t)
+        touched.setdefault(i, set()).add(j)
+
+    for j in sol.done:
+        assert sol.start[j] == min(days[j]), f"{j}: start date does not match the schedule"
+        assert sol.end[j] == max(days[j]), f"{j}: end date does not match the schedule"
+        assert sol.duration[j] == max(days[j]) - min(days[j]) + 1, f"{j}: wrong duration"
+        assert sol.late[j] == max(0, max(days[j]) - inst["d"][j]), f"{j}: wrong lateness"
+    for i in inst["S"]:
+        assert sol.per_person.get(i, set()) == touched.get(i, set()), f"{i}: wrong project set"
+
+    profit = sum(inst["g"][j] - inst["c"][j] * max(0, max(days[j]) - inst["d"][j])
+                 for j in sol.done)
+    assert sol.profit == profit, f"profit {sol.profit} != {profit} recomputed from schedule"
+    assert sol.max_duration == max((max(days[j]) - min(days[j]) + 1 for j in sol.done), default=0)
+    assert sol.max_projects == max((len(v) for v in touched.values()), default=0)
     return True
 
 
@@ -295,7 +312,10 @@ def _run_gurobi(inst, m, v):
         return None, {}
     sol = extract_solution(inst, v)
     return sol, {"status": m.Status, "gap": m.MIPGap, "runtime": m.Runtime,
-                 "n_vars": m.NumVars, "n_constrs": m.NumConstrs}
+                 "n_vars": m.NumVars, "n_constrs": m.NumConstrs,
+                 # True only when the solver PROVED optimality. Everything
+                 # downstream that assumes an optimum must check this.
+                 "optimal": m.Status == GRB.OPTIMAL}
 
 
 def _run_highs(inst, m, v, time_limit=None, mip_gap=0.0):
@@ -342,7 +362,8 @@ def _run_highs(inst, m, v, time_limit=None, mip_gap=0.0):
     lookup = {var.VarName: values[idx] for idx, var in enumerate(gvars)}
     sol = extract_solution(inst, v, value=lambda var: lookup[var.VarName])
     return sol, {"status": status, "gap": info.mip_gap, "runtime": h.getRunTime(),
-                 "n_vars": m.NumVars, "n_constrs": m.NumConstrs}
+                 "n_vars": m.NumVars, "n_constrs": m.NumConstrs,
+                 "optimal": status.lower().startswith("optimal")}
 
 
 def model_size(inst):

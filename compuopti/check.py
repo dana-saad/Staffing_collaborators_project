@@ -49,23 +49,20 @@ def check_point_nondominated(inst, sol, time_limit=None, backend="gurobi"):
     results = {}
 
     def converged(solution):
-        gap = (solution.meta or {}).get("gap")
-        status = (solution.meta or {}).get("status")
-        if isinstance(status, str):            # HiGHS reports a word
-            return status.lower().startswith("optimal")
-        return gap is not None and gap <= 1e-6
+        # B10: a time-limited solve can find nothing at all.
+        return solution is not None and bool((solution.meta or {}).get("optimal"))
 
     best_profit = solve(inst, "profit", bounds={"duration": d, "projects": q},
                         time_limit=time_limit, backend=backend)
-    results["profit"] = (best_profit.profit, p)
+    results["profit"] = (best_profit.profit if best_profit else p, p)
 
     least_duration = solve(inst, "duration", bounds={"profit": p, "projects": q},
                            time_limit=time_limit, backend=backend)
-    results["duration"] = (least_duration.max_duration, d)
+    results["duration"] = (least_duration.max_duration if least_duration else d, d)
 
     least_projects = solve(inst, "projects", bounds={"profit": p, "duration": d},
                            time_limit=time_limit, backend=backend)
-    results["projects"] = (least_projects.max_projects, q)
+    results["projects"] = (least_projects.max_projects if least_projects else q, q)
 
     # A dominating solution is one that was actually FOUND to be strictly
     # better. Any incumbent is feasible, so this conclusion is valid even
